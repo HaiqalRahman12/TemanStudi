@@ -16,24 +16,6 @@ Repositori ini berisi kode sumber layanan AI berbasis **Python + FastAPI** yang 
 
 - **Strict Output Validation** Menggunakan **Grammar Constraint** untuk memastikan output AI *selalu* dalam format **JSON valid**, siap dipakai backend utama.
 
----
-
-## 🏗️ Arsitektur Sistem
-
-Layanan ini bertindak sebagai **Stateless Microservice**.
-
-```mermaid
-graph LR
-    A[Client/Main Backend] -->|POST PDF/PPTX| B(FastAPI Controller)
-    B --> C{Format Detector}
-    C -->|PDF| D[PyMuPDF Extractor]
-    C -->|PPTX| E[Python-PPTX Extractor]
-    D & E --> F[Sliding Window Chunker]
-    F -->|Chunks| G[AI Engine (Qwen 1.7B)]
-    G -->|JSON Fragments| B
-    B -->|Final JSON| A
-````
-
 -----
 
 ## 📋 Prasyarat Sistem
@@ -54,7 +36,7 @@ Sebelum menjalankan aplikasi, pastikan perangkat Anda memenuhi syarat berikut:
 ### 1\. Clone Repository
 
 ```bash
-git clone [https://github.com/username-anda/teman-studi-ai.git](https://github.com/username-anda/teman-studi-ai.git)
+git clone [https://github.com/username-anda/TemanStudi.git](https://github.com/username-anda/TemanStudi.git)
 cd teman-studi-ai
 ```
 
@@ -99,11 +81,13 @@ pip install llama-cpp-python --upgrade --force-reinstall --no-cache-dir --extra-
 **Struktur folder akhir:**
 
 ```text
-teman-studi-ai/
+TemanStudi/
 ├── models/
 │   └── Qwen3-1.7B-Instruct-Q5_K_M.gguf
 ├── app/
+|   |__ __init__.py
 │   ├── services/
+|   |   └── __init__.py
 │   │   └── ai_engine.py
 ├── main.py
 └── requirements.txt
