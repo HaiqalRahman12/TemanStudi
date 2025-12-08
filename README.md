@@ -34,5 +34,5 @@ Sebelum memulai, pastikan Anda telah menginstal:
 
 Ikuti langkah-langkah berikut untuk menjalankan proyek ini di mesin lokal Anda:
 ```bash
-git clone [https://github.com/username-anda/backend-temanstudi.git](https://github.com/username-anda/backend-temanstudi.git)
-cd backend-temanstudi
+git clone [https://github.com/HaiqalRahman12/TemanStudi.git](https://github.com/HaiqalRahman12/TemanStudi.git)
+cd TemanStudi
