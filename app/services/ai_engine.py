@@ -57,8 +57,8 @@ class AIBackendEngine:
         self.llm = Llama(
             model_path=final_path,
             n_gpu_layers=-1,      # Load semua layer ke GPU
-            n_ctx=8192,           # Context window besar (T4 kuat nampung ini)
-            n_batch=1024,         # Batch size besar biar ngebut
+            n_ctx=8192,           # Context window besar
+            n_batch=1024,         # Batch size besar
             verbose=False,
             chat_format="chatml"  # Format native Qwen
         )
@@ -103,6 +103,9 @@ class AIBackendEngine:
         return chunks
 
     def generate_flashcards(self, full_text: str) -> list[dict]:
+        # DEBUG: Cek Teks Masuk
+        print(f"\n📄 Input Teks: {len(full_text)} karakter")
+        
         chunks = self._split_text(full_text)
         logger.info(f"📚 Memproses {len(chunks)} chunks (High Performance Mode)...")
         all_cards = []
@@ -116,7 +119,7 @@ class AIBackendEngine:
         3. Jawaban harus padat dan akurat.
         """
 
-        # Few-shot example 1: Fisika/Umum (Untuk menangani definisi/konsep)
+        # Few-shot example 1: Fisika/Umum
         example_user_1 = "Teks: Gravitasi adalah gaya tarik-menarik yang terjadi antara semua partikel yang memiliki massa di alam semesta."
         example_assistant_1 = json.dumps({
             "flashcards": [
@@ -125,7 +128,7 @@ class AIBackendEngine:
             ]
         })
 
-        # Few-shot example 2: Matematika (Untuk menangani rumus/definisi eksak)
+        # Few-shot example 2: Matematika
         example_user_2 = "Teks: Persamaan kuadrat adalah persamaan polinomial orde dua dengan bentuk umum ax^2 + bx + c = 0, di mana a ≠ 0. Akar-akar persamaan dapat dicari menggunakan rumus ABC yaitu x = (-b ± √(b^2 - 4ac)) / 2a."
         example_assistant_2 = json.dumps({
             "flashcards": [
@@ -138,16 +141,21 @@ class AIBackendEngine:
             if len(chunk) < 150: continue
 
             try:
-                # Menggunakan Qwen 4B
+                print(f"⚡ Inference Chunk {i+1}...")
+                
                 response = self.llm.create_chat_completion(
                     messages=[
                         {"role": "system", "content": system_msg},
-                        {"role": "user", "content": example_user},
-                        {"role": "assistant", "content": example_assistant},
+                        # MASUKKAN KEDUA CONTOH SECARA EKSPLISIT (FIXED HERE)
+                        {"role": "user", "content": example_user_1},
+                        {"role": "assistant", "content": example_assistant_1},
+                        {"role": "user", "content": example_user_2},
+                        {"role": "assistant", "content": example_assistant_2},
+                        # INPUT USER
                         {"role": "user", "content": f"Analisis teks ini dan buat 3-5 flashcard:\n\n{chunk}"}
                     ],
                     temperature=0.4, 
-                    max_tokens=2048, # Output lebih panjang
+                    max_tokens=2048, 
                     response_format=self._create_grammar() # Wajib JSON
                 )
                 
@@ -155,6 +163,7 @@ class AIBackendEngine:
                 data = json.loads(content)
                 new_cards = data.get("flashcards", [])
                 
+                print(f"✅ Chunk {i+1}: Dapat {len(new_cards)} kartu.")
                 for card in new_cards:
                     if len(card.get('question','')) > 5:
                         all_cards.append(card)
