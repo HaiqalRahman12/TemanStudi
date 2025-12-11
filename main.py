@@ -7,21 +7,28 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
+from huggingface_hub import hf_hub_download
 
-from app.services.ai_engine import get_engine
+# Import Engine dari folder app/services
+# (Struktur folder akan dibuat otomatis oleh Notebook Kaggle nanti)
+from app.services.ai_engine import init_engine, get_engine
 
-app = FastAPI(title="TemanStudi AI Service (PDF & PPTX)")
+# --- KONFIGURASI MODEL ---
+# Menggunakan Qwen 4B sesuai request
+REPO_ID = "unsloth/Qwen3-4B-Instruct-2507-GGUF"
+FILENAME = "Qwen3-4B-Instruct-2507-Q5_K_M.gguf"
+# -------------------------
 
-# CORS: Agar JS Backend bisa akses
+app = FastAPI(title="TemanStudi Kaggle Service")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Output Schema (Sesuai ERD Project)
 class FlashcardItem(BaseModel):
     pertanyaan: str
     jawaban: str
@@ -31,23 +38,19 @@ class AIResponse(BaseModel):
     pesan: str
     data: List[FlashcardItem]
 
-# --- Helper Ekstraksi ---
-
-def extract_from_pdf(path: str, start: int, end: int) -> str:
+# --- Helper Logic ---
+def extract_from_pdf(path, s, e):
     doc = fitz.open(path)
     text = ""
-    total = len(doc)
-    s_idx, e_idx = max(0, start - 1), min(total, end)
+    s_idx, e_idx = max(0, s-1), min(len(doc), e)
     for i in range(s_idx, e_idx):
         text += doc.load_page(i).get_text() + "\n"
-    doc.close()
     return text
 
-def extract_from_pptx(path: str, start: int, end: int) -> str:
+def extract_from_pptx(path, s, e):
     prs = Presentation(path)
     text = ""
-    total = len(prs.slides)
-    s_idx, e_idx = max(0, start - 1), min(total, end)
+    s_idx, e_idx = max(0, s-1), min(len(prs.slides), e)
     for i in range(s_idx, e_idx):
         slide = prs.slides[i]
         for shape in slide.shapes:
@@ -56,62 +59,66 @@ def extract_from_pptx(path: str, start: int, end: int) -> str:
         text += "\n"
     return text
 
-# --- Endpoint Utama ---
-
+# --- Startup Event ---
 @app.on_event("startup")
 async def startup_event():
-    """Panaskan mesin (Load Model ke GPU) saat server nyala"""
-    get_engine()
+    print("⏳ [Main.py] Sedang mendownload model Qwen 4B... (Ini berjalan di background)")
+    try:
+        # Download ke folder ./models di working directory Kaggle
+        os.makedirs("models", exist_ok=True)
+        model_path = hf_hub_download(
+            repo_id=REPO_ID,
+            filename=FILENAME,
+            local_dir="./models"
+        )
+        print(f"✅ [Main.py] Model Downloaded: {model_path}")
+        
+        # Init Engine
+        init_engine(model_path)
+        print("✅ [Main.py] AI Engine Siap & Loaded di GPU!")
+    except Exception as e:
+        print(f"❌ [Main.py] Gagal Init Engine: {e}")
 
+# --- Endpoints ---
 @app.post("/generate", response_model=AIResponse)
 async def generate_endpoint(
     file: UploadFile = File(...),
     start_page: int = Form(1),
     end_page: int = Form(10)
 ):
-    # 1. Cek Ekstensi
     filename = file.filename.lower()
     if not (filename.endswith(".pdf") or filename.endswith(".pptx")):
-        raise HTTPException(400, "Format file harus .pdf atau .pptx")
+        raise HTTPException(400, "Format harus PDF atau PPTX")
 
-    # 2. Simpan Sementara
     ext = ".pdf" if filename.endswith(".pdf") else ".pptx"
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
 
     try:
-        # 3. Ekstrak Teks Berdasarkan Format
         full_text = ""
-        if filename.endswith(".pdf"):
+        if "pdf" in ext:
             full_text = extract_from_pdf(tmp_path, start_page, end_page)
         else:
             full_text = extract_from_pptx(tmp_path, start_page, end_page)
 
-        # 4. Validasi Isi Teks (Menangani Scan Gambar/Slide Kosong)
-        if len(full_text.strip()) < 50:
-            return AIResponse(status="error", pesan="Teks kosong/terlalu pendek (Mungkin Gambar?)", data=[])
+        if len(full_text) < 50:
+            return AIResponse(status="error", pesan="Teks kosong", data=[])
 
-        # 5. Panggil AI Engine
         engine = get_engine()
+        if engine is None:
+             raise HTTPException(503, "AI Engine belum siap/sedang loading model. Coba 1 menit lagi.")
+             
         results = engine.generate_flashcards(full_text)
-
-        # 6. Mapping ke Format ERD
-        final_data = [
-            FlashcardItem(pertanyaan=r.get("question",""), jawaban=r.get("answer","")) 
-            for r in results
-        ]
-
+        
+        final_data = [FlashcardItem(pertanyaan=r['question'], jawaban=r['answer']) for r in results]
         return AIResponse(status="success", pesan="OK", data=final_data)
 
-    except Exception as e:
-        print(f"ERROR SYSTEM: {e}")
-        raise HTTPException(500, str(e))
-    
     finally:
-        # Hapus file temp (Cleanup) agar storage tidak penuh
         if os.path.exists(tmp_path): os.remove(tmp_path)
 
 @app.get("/")
 def health():
-    return {"status": "AI Ready", "model": "Qwen 3 1.7B"}
+    engine = get_engine()
+    status = "Ready" if engine else "Loading Model..."
+    return {"status": status, "model": FILENAME}
