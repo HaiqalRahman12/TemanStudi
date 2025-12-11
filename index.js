@@ -50,13 +50,13 @@ app.post('/register', (req, res) => {
     // Jika email belum ada, lanjut proses registrasi
 
     // 1. Acak Password (Hashing)
-    //const hashPassword = bcrypt.hashSync(password, 10)
+    const hashPassword = bcrypt.hashSync(password, 10)
 
     // 2. Masukkan ke Database
     // (Pastikan nama kolom sesuai dengan database Anda. Saya asumsikan ada kolom 'nama')
     const sql = "INSERT INTO user (email, password, nama, created) VALUES (?, ?, ?, NOW())"
 
-    db.query(sql, [email, password, nama], (error, result) => {
+    db.query(sql, [email, hashPassword, nama], (error, result) => {
       if (error) {
         console.log(error) // Cek di terminal kalau ada error
         return response(500, null, "Gagal mendaftarkan user", res)
@@ -85,29 +85,42 @@ app.post('/login', (req, res) => {
     const user = result[0]
 
     // Cek Password (disarankan pakai bcrypt.compareSync, tapi ini pakai contoh logika Anda)
+    let passwordValid = false
+
+    // CARA 1: Cek apakah password di DB terlihat seperti hash (diawali $2b$ atau $2a$)
+    if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+      // Jika formatnya hash, gunakan bcrypt
+      passwordValid = require('bcryptjs').compareSync(password, user.password)
+    } else {
+      // Jika tidak (berarti user lama/plain text), bandingkan langsung
+      passwordValid = (password === user.password)
+    }
 
     // --- INI BAGIAN PEMBUATAN JWT (Mencetak Gelang) ---
     // Kita simpan data penting (payload) ke dalam token
-    const token = jwt.sign({
-      user_id: user.user_id,
-      email: user.email
-    }, process.env.JWT_SECRET, { expiresIn: '1h' }) // Token kadaluwarsa dalam 1 jam
-    // --------------------------------------------------
+    if (passwordValid) {
+      const token = jwt.sign({
+        user_id: user.user_id,
+        email: user.email
+      }, process.env.JWT_SECRET, { expiresIn: '1h' }) // Token kadaluwarsa dalam 1 jam
+      // --------------------------------------------------
 
-    const data = {
-      token: token, // <-- Token ini yang dikirim ke Frontend/Postman
-      user_id: user.user_id,
-      nama: user.nama
+      const data = {
+        token: token, // <-- Token ini yang dikirim ke Frontend/Postman
+        user_id: user.user_id,
+        nama: user.nama
+      }
+      return response(200, data, "Login Berhasil", res)
+    } else {
+      return response(401, null, "Password Salah", res)
     }
-    return response(200, data, "Login Berhasil", res)
-
   })
 })
 
-app.post('/logout',(req,res) =>{
-  res.cookie('jwt',"",{
-    httpOnly : true,
-    expires : new Date(Date.now())
+app.post('/logout', (req, res) => {
+  res.cookie('jwt', "", {
+    httpOnly: true,
+    expires: new Date(Date.now())
   })
 
   return response(200, data, "logout Berhasil", res)
