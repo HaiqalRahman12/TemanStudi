@@ -116,12 +116,21 @@ class AIBackendEngine:
         3. Jawaban harus padat dan akurat.
         """
 
-        # Few-shot example untuk menuntun logika model
-        example_user = "Teks: Gravitasi adalah gaya tarik-menarik yang terjadi antara semua partikel yang memiliki massa di alam semesta."
-        example_assistant = json.dumps({
+        # Few-shot example 1: Fisika/Umum (Untuk menangani definisi/konsep)
+        example_user_1 = "Teks: Gravitasi adalah gaya tarik-menarik yang terjadi antara semua partikel yang memiliki massa di alam semesta."
+        example_assistant_1 = json.dumps({
             "flashcards": [
                 {"question": "Apa definisi dasar dari gaya gravitasi?", "answer": "Gaya tarik-menarik antar partikel bermassa di alam semesta."},
                 {"question": "Faktor apa yang mempengaruhi besarnya gaya gravitasi antar dua benda?", "answer": "Massa kedua benda dan jarak di antara keduanya."}
+            ]
+        })
+
+        # Few-shot example 2: Matematika (Untuk menangani rumus/definisi eksak)
+        example_user_2 = "Teks: Persamaan kuadrat adalah persamaan polinomial orde dua dengan bentuk umum ax^2 + bx + c = 0, di mana a ≠ 0. Akar-akar persamaan dapat dicari menggunakan rumus ABC yaitu x = (-b ± √(b^2 - 4ac)) / 2a."
+        example_assistant_2 = json.dumps({
+            "flashcards": [
+                {"question": "Bagaimana bentuk umum dari persamaan kuadrat?", "answer": "ax^2 + bx + c = 0, dengan syarat a ≠ 0."},
+                {"question": "Sebutkan rumus ABC untuk mencari akar persamaan kuadrat.", "answer": "x = (-b ± √(b^2 - 4ac)) / 2a"}
             ]
         })
 
