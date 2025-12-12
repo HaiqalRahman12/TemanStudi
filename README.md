@@ -1,6 +1,6 @@
 # 🧠 TemanStudi - AI Microservice
 
-Backend Service untuk Generasi Flashcard Cerdas menggunakan **Local LLM (Qwen 3 1.7B)**.
+Backend Service untuk Generasi Flashcard Cerdas menggunakan **Local LLM (Qwen 3 4B)**.
 
 Repositori ini berisi kode sumber layanan AI berbasis **Python + FastAPI** yang bertugas memproses dokumen **PDF/PPTX** dan mengubahnya menjadi pasangan **Tanya–Jawab (Flashcard)** secara otomatis. Layanan ini didesain untuk berjalan **sepenuhnya lokal**, cocok untuk GPU konsumen seperti **RTX 3050**, dan sangat efisien dalam penggunaan memori.
 
@@ -8,7 +8,7 @@ Repositori ini berisi kode sumber layanan AI berbasis **Python + FastAPI** yang 
 
 ## 🌟 Fitur Utama
 
-- **Offline Intelligence** Menggunakan model **Qwen 3 1.7B (GGUF)** yang berjalan 100% lokal — gratis, privat, dan tanpa API key.
+- **Offline Intelligence** Menggunakan model **Qwen 3 4B (GGUF)** yang berjalan 100% lokal — gratis, privat, dan tanpa API key.
 
 - **Dual Format Support** Mendukung ekstraksi teks dari file **PDF (.pdf)** dan **PowerPoint (.pptx)**.
 
@@ -25,8 +25,8 @@ Sebelum menjalankan aplikasi, pastikan perangkat Anda memenuhi syarat berikut:
   * **OS:** Windows 10/11 atau Linux
   * **Python:** Versi 3.10 atau lebih baru
   * **GPU (Wajib untuk performa optimal):**
-      * NVIDIA GPU dengan minimal VRAM **4GB**
-      * (Diuji pada RTX 3050 Mobile)
+      * NVIDIA GPU dengan minimal VRAM **16GB**
+      * (Diuji pada NVIDIA T4)
   * **CUDA Toolkit:** Versi 11.8 atau 12.1
 
 -----
@@ -73,8 +73,8 @@ pip install llama-cpp-python --upgrade --force-reinstall --no-cache-dir --extra-
 ### 5\. Download Model AI
 
 1.  Kunjungi HuggingFace.
-2.  Cari **Qwen3-1.7B-Instruct-GGUF**.
-3.  Download file: **`Qwen3-1.7B-Instruct-Q5_K_M.gguf`**.
+2.  Cari **Qwen3-4B-Instruct-GGUF**.
+3.  Download file: **`Qwen3-4B-Instruct-Q5_K_M.gguf`**.
 4.  Buat folder `models/` pada root proyek.
 5.  Simpan file model di dalam folder tersebut.
 
@@ -83,7 +83,7 @@ pip install llama-cpp-python --upgrade --force-reinstall --no-cache-dir --extra-
 ```text
 TemanStudi/
 ├── models/
-│   └── Qwen3-1.7B-Instruct-Q5_K_M.gguf
+│   └── Qwen3-4B-Instruct-Q5_K_M.gguf
 ├── app/
 |   |__ __init__.py
 │   ├── services/
@@ -104,7 +104,7 @@ uvicorn main:app --reload --port 8000
 ```
 
 Saat model berhasil dimuat, akan muncul log:
-`INFO: 🚀 Memuat Model ke GPU: Qwen3-1.7B-Instruct-Q5_K_M.gguf...`
+`INFO: 🚀 Memuat Model ke GPU: Qwen3-4B-Instruct-Q5_K_M.gguf...`
 
 Cek kesehatan server melalui browser:  
 👉 `http://localhost:8000/`
