@@ -1,38 +1,207 @@
-# BackEnd TemanStudi
+<div align="center">
+  <a href='https://postimg.cc/sB7wXnXy' target='_blank'><img src='https://i.postimg.cc/sB7wXnXy/logo.png' border='0' alt='logo' width=200></a>
+  <h1>⚙️ TemanStudi Backend API</h1>
+  <p><b>RESTful API untuk Manajemen Belajar & Orkestrasi AI</b></p>
+  <p><i>Penghubung antara Frontend, Database, dan Layanan AI Generator</i></p>
 
-Repository ini berisi kode sumber backend untuk aplikasi **TemanStudi**. Aplikasi ini dirancang untuk membantu pengguna mengelola materi belajar menggunakan metode *Flashcard* (kartu kilat) dan melacak statistik belajar mereka.
+  <p>
+    <a href="https://nodejs.org/">
+      <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" />
+    </a>
+    <a href="https://expressjs.com/">
+      <img src="https://img.shields.io/badge/Express.js-4.x-000000?style=for-the-badge&logo=express&logoColor=white" />
+    </a>
+    <a href="https://www.mysql.com/">
+      <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
+    </a>
+    <a href="https://jwt.io/">
+      <img src="https://img.shields.io/badge/JWT-Authentication-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" />
+    </a>
+  </p>
+</div>
 
-Backend ini dibangun menggunakan **Node.js**, **Express**, dan database **MySQL**.
+---
 
-## 🌟 Fitur Utama
+## ✨ Kenapa Backend Ini?
 
-* **Autentikasi Pengguna**: Registrasi dan Login menggunakan JSON Web Token (JWT).
-* **Manajemen Deck**: Pengguna dapat melihat daftar deck pribadi dan menghapus deck.
-* **CRUD Flashcard**: Menambah, melihat, mengedit, dan menghapus flashcard dalam sebuah deck.
-* **Pencatatan Sesi Belajar**: Menyimpan durasi sesi belajar (*study logs*).
-* **Statistik**: Melihat total sesi dan total waktu belajar pengguna.
-* **Keamanan**: Middleware autentikasi untuk melindungi endpoint sensitif (Private Routes).
-* **Standardized Response**: Format respons API yang konsisten (JSON).
+🔐 **Keamanan Terjamin** — Autentikasi berbasis JWT & hashing password dengan Bcrypt.
 
-## 🛠️ Teknologi yang Digunakan
+📚 **Manajemen Belajar Terstruktur** — Mengelola user, deck, flashcard, dan histori belajar.
 
-* [Node.js](https://nodejs.org/) - Runtime environment JavaScript.
-* [Express.js](https://expressjs.com/) - Web framework untuk Node.js.
-* [MySQL](https://www.mysql.com/) - Sistem manajemen database relasional.
-* [JWT (JsonWebToken)](https://jwt.io/) - Untuk autentikasi aman.
-* [Dotenv](https://www.npmjs.com/package/dotenv) - Manajemen variabel lingkungan.
-* [Nodemon](https://nodemon.io/) - Utility untuk hot-reloading selama pengembangan.
+🤖 **AI Orchestration Ready** — Menjadi penghubung antara user dan AI Service (PDF → Flashcard).
 
-## 📋 Prasyarat
+⚡ **Ringan & Skalabel** — REST API sederhana, mudah dikembangkan ke microservice.
 
-Sebelum memulai, pastikan Anda telah menginstal:
-1.  **Node.js** (v14 atau lebih baru)
-2.  **MySQL Server**
-3.  **Git** (opsional, untuk kloning repo)
+---
 
-## 🚀 Instalasi dan Konfigurasi
+## 📖 Tentang API
 
-Ikuti langkah-langkah berikut untuk menjalankan proyek ini di mesin lokal Anda:
+**TemanStudi Backend API** adalah server utama yang menangani seluruh **logika bisnis** aplikasi TemanStudi. Backend ini dibangun menggunakan **Node.js + Express.js** dan berperan sebagai:
+
+* Jembatan antara **Frontend (Vue.js)** dan **AI Service (FastAPI – Kaggle GPU)**
+* Pengelola **database MySQL**
+* Penyedia **RESTful API** yang aman dan terstruktur
+
+### Tanggung Jawab Utama
+
+* 🔐 Autentikasi user (Register & Login)
+* 🗄️ CRUD Deck, Flashcard, dan Study Log
+* 🤖 Orkestrasi request AI Generator
+
+---
+
+## 🛠️ Persiapan Database
+
+Buat database MySQL dan jalankan query berikut:
+
+```sql
+CREATE DATABASE temanstudi;
+USE temanstudi;
+
+-- Tabel User
+CREATE TABLE user (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    nama VARCHAR(255) NOT NULL,
+    created DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabel Decks
+CREATE TABLE decks (
+    deck_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    nama_deck VARCHAR(255),
+    description TEXT,
+    created DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
+);
+
+-- Tabel Flashcards
+CREATE TABLE flashcards (
+    flashcard_id INT AUTO_INCREMENT PRIMARY KEY,
+    deck_id INT,
+    pertanyaan TEXT,
+    jawaban TEXT,
+    FOREIGN KEY (deck_id) REFERENCES decks(deck_id) ON DELETE CASCADE
+);
+
+-- Tabel Study Logs
+CREATE TABLE studylogs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    deck_id INT,
+    durasi_belajar INT,
+    created DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## 🚀 Cara Menjalankan Backend
+
+### 1️⃣ Masuk ke Folder Backend
+
 ```bash
-git clone [https://github.com/HaiqalRahman12/TemanStudi.git](https://github.com/HaiqalRahman12/TemanStudi.git)
-cd TemanStudi
+cd TemanStudi-backend
+```
+
+### 2️⃣ Install Dependencies
+
+```bash
+npm install
+```
+
+### 3️⃣ Konfigurasi Environment
+
+Buat file `.env` di root folder backend:
+
+```env
+PORT=3000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=temanstudi
+JWT_SECRET=rahasia_dapur_budi_12345
+```
+
+> ⚠️ **Catatan:** Pastikan `JWT_SECRET` konsisten dengan yang digunakan di kode.
+
+### 4️⃣ Jalankan Server
+
+```bash
+# Mode Development (nodemon)
+npm run api-service
+
+# Mode Normal
+node index.js
+```
+
+Server akan berjalan di:
+
+```
+http://localhost:3000
+```
+
+---
+
+## 🔌 Dokumentasi Endpoint API
+
+### 🔐 Autentikasi
+
+| Method | Endpoint    | Deskripsi               |
+| ------ | ----------- | ----------------------- |
+| POST   | `/register` | Registrasi user baru    |
+| POST   | `/login`    | Login & mendapatkan JWT |
+
+---
+
+### 📚 Deck & Flashcard
+
+> Header wajib: `Authorization: Bearer <TOKEN>`
+
+| Method | Endpoint               | Deskripsi               |
+| ------ | ---------------------- | ----------------------- |
+| GET    | `/my_decks`            | Ambil semua deck user   |
+| DELETE | `/deck/:id`            | Hapus deck & isinya     |
+| POST   | `/flashcard`           | Tambah flashcard manual |
+| GET    | `/deck/:id/flashcards` | Ambil kartu dalam deck  |
+| PUT    | `/flashcard/:id`       | Edit flashcard          |
+| DELETE | `/flashcard/:id`       | Hapus flashcard         |
+
+---
+
+### 🤖 AI Generator
+
+> Header wajib: `Authorization: Bearer <TOKEN>`
+
+| Method | Endpoint         | Deskripsi                      |
+| ------ | ---------------- | ------------------------------ |
+| POST   | `/generate-deck` | Upload PDF → AI → Simpan ke DB |
+
+**Body (multipart/form-data):**
+
+* `file` (PDF)
+* `nama_deck`
+* `start_page`
+* `end_page`
+
+> ⚠️ Endpoint ini terhubung ke **AI Service via Ngrok**. Pastikan URL Ngrok di `index.js` sudah sesuai.
+
+---
+
+### 📊 Statistik Belajar
+
+> Header wajib: `Authorization: Bearer <TOKEN>`
+
+| Method | Endpoint       | Deskripsi                    |
+| ------ | -------------- | ---------------------------- |
+| POST   | `/log_session` | Simpan durasi belajar        |
+| GET    | `/statistics`  | Statistik total sesi & waktu |
+
+---
+
+<div align="center">
+  <p>✨ Backend ini dirancang sebagai fondasi sistem belajar berbasis AI</p>
+  <p><i>TemanStudi Backend — Secure. Scalable. AI-ready.</i></p>
+</div>
