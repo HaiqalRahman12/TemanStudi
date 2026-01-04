@@ -8,6 +8,7 @@ const db = require('./connection')
 const response = require('./response')
 const app = express()
 const port = process.env.PORT
+const bcrypt = require('bcryptjs')
 
 app.use(express.json())
 const jwt = require('jsonwebtoken')
@@ -436,8 +437,111 @@ app.get('/statistics', cekToken, (req, res) => {
 })
 
 
-app.post('/coba', (req, res) => {
-  res.send('POST request to the homepage')
+app.get('/coba', (req, res) => {
+  db.query("SELECT * FROM `user`", (error, result) => {
+    console.log(result)
+    res.send(result)
+  })
+})
+
+// --- ENDPOINT: EDIT PROFIL (UBAH NAMA) ---
+// app.put('/update-profile', cekToken, (req, res) => {
+//   // 1. Ambil data baru dari Body (yang diketik user)
+//   const { nama } = req.body
+  
+//   // 2. Ambil ID User dari Token (Supaya tidak salah edit orang lain)
+//   const userId = req.user.user_id
+
+//   // Validasi: Pastikan nama tidak kosong
+//   if (!nama) {
+//     return response(400, null, "Nama tidak boleh kosong", res)
+//   }
+
+//   // 3. Lakukan Update ke Database
+//   // Pastikan nama tabel Anda 'user' atau 'users' (sesuaikan dengan database Anda)
+//   const sql = "UPDATE user SET nama = ? WHERE user_id = ?"
+
+//   db.query(sql, [nama, userId], (err, result) => {
+//     if (err) {
+//       return response(500, null, "Gagal mengupdate profil", res)
+//     }
+
+//     // Cek apakah ada data yang berubah
+//     // (Kadang result.affectedRows tetap 1 meskipun nama yang dikirim sama persis)
+    
+//     // Kita berikan respon sukses beserta data barunya
+//     const dataBaru = {
+//       user_id: userId,
+//       nama: nama
+//     }
+    
+//     response(200, dataBaru, "Berhasil mengubah nama profil", res)
+//   })
+// })
+
+// --- ENDPOINT: EDIT PROFIL (NAMA & PASSWORD) ---
+app.put('/update-profile', cekToken, (req, res) => {
+  const userId = req.user.user_id
+  const { nama, password_lama, password_baru } = req.body
+
+  // 1. Validasi Input Nama (Wajib ada)
+  if (!nama) {
+    return response(400, null, "Nama tidak boleh kosong", res)
+  }
+
+  // 2. Ambil data user dari Database dulu (untuk ambil password lama yang tersimpan)
+  const sqlGet = "SELECT * FROM user WHERE user_id = ?"
+  
+  db.query(sqlGet, [userId], (err, result) => {
+    if (err) return response(500, null, "Error mengambil data user", res)
+    if (result.length === 0) return response(404, null, "User tidak ditemukan", res)
+
+    const currentUser = result[0]
+    let passwordFinal = currentUser.password // Defaultnya pakai password yang sekarang
+
+    // 3. Cek apakah user ingin ganti password?
+    if (password_baru) {
+      // Jika mau ganti password, Password Lama WAJIB diisi
+      if (!password_lama) {
+        return response(400, null, "Harap masukkan password lama untuk keamanan.", res)
+      }
+
+      // Cek kecocokan password lama
+      // Logika ini support password lama yang masih plain text ataupun sudah hash
+      let isMatch = false
+      if (currentUser.password.startsWith('$2b$') || currentUser.password.startsWith('$2a$')) {
+        isMatch = bcrypt.compareSync(password_lama, currentUser.password)
+      } else {
+        isMatch = (password_lama === currentUser.password)
+      }
+
+      if (!isMatch) {
+        return response(401, null, "Password lama salah!", res)
+      }
+
+      // Jika cocok, enkripsi password baru
+      passwordFinal = bcrypt.hashSync(password_baru, 10)
+    }
+
+    // 4. Lakukan Update ke Database (Nama & Password)
+    const sqlUpdate = "UPDATE user SET nama = ?, password = ? WHERE user_id = ?"
+
+    db.query(sqlUpdate, [nama, passwordFinal, userId], (errUpdate, resultUpdate) => {
+      if (errUpdate) return response(500, null, "Gagal update profil", res)
+
+      const dataBaru = {
+        user_id: userId,
+        nama: nama,
+        message: password_baru ? "Nama dan Password berhasil diubah" : "Nama berhasil diubah"
+      }
+
+      response(200, dataBaru, "Update Profil Berhasil", res)
+    })
+  })
+})
+
+
+app.get('/profile', (req, res) => {
   db.query("SELECT * FROM `user`", (error, result) => {
     console.log(result)
     res.send(result)
